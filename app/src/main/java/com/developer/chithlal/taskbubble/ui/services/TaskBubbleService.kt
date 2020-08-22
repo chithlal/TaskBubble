@@ -5,9 +5,12 @@ import android.app.Service
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.*
@@ -34,6 +37,8 @@ class TaskBubbleService : Service() {
     var initialTouchY: Float = 0F
     private var activePointerId = 0
     private lateinit var mBinding: BubbleViewBinding
+
+    lateinit var  uiHandler:Handler
     override fun onBind(intent: Intent?): IBinder? {
         Log.d(TAG, "onBind: called")
         return null
@@ -65,6 +70,7 @@ class TaskBubbleService : Service() {
         mWindowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         mWindowManager.addView(mBubbleView, params)
         registerListener(params)
+        uiHandler = Handler(Looper.getMainLooper())
     }
 
     private fun registerListener(params: WindowManager.LayoutParams) {
@@ -150,8 +156,7 @@ class TaskBubbleService : Service() {
 
     private fun openTaskList() {
         val list = ArrayList<Task>()
-        list.add(Task("Instagram",
-        "com.instagram",120,1))
+        list.addAll(getTaskList())
         val taskAdapter = TasklistAdapter(list)
         mBinding.rvTaskList.layoutManager = LinearLayoutManager(this)
         mBinding.rvTaskList.adapter = taskAdapter
@@ -165,5 +170,17 @@ class TaskBubbleService : Service() {
         super.onDestroy()
         mWindowManager.removeView(mBubbleView)
         Log.d(TAG, "onDestroy: called")
+    }
+
+    fun getTaskList():List<Task>{
+
+        var taskList = ArrayList<ActivityManager.RunningAppProcessInfo>().toMutableList()
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        taskList = activityManager.runningAppProcesses
+        val tasks = ArrayList<Task>()
+        for(task in taskList){
+            tasks.add(Task(task.processName,"Package",task.pid,0))
+        }
+        return tasks
     }
 }
